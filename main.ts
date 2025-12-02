@@ -5,6 +5,7 @@ import { getWSManager } from "./src/platform/websocket.ts";
 
 // Import cron jobs
 import "./src/jobs/health-check.ts";
+import "./src/jobs/metrics-collection.ts";
 
 async function main(): Promise<void> {
   try {

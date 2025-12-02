@@ -179,3 +179,27 @@ export function validateFileUpload(
     errors,
   };
 }
+
+export function validateCustomDomain(domain: string): ValidationResult {
+  const errors: string[] = [];
+
+  if (!domain || domain.trim().length === 0) {
+    errors.push("Domain is required");
+  }
+
+  // Basic domain validation regex
+  const domainRegex = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/i;
+
+  if (domain && !domainRegex.test(domain.trim())) {
+    errors.push("Invalid domain format. Must be a valid domain like example.com or subdomain.example.com");
+  }
+
+  if (domain && domain.length > 253) {
+    errors.push("Domain must be less than 253 characters");
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
