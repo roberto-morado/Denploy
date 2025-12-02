@@ -17,6 +17,7 @@ export interface App {
   userId: string;
   name: string;
   subdomain: string;
+  customDomains: string[]; // Custom domains pointing to this app
   createdAt: Date;
   updatedAt: Date;
   status: AppStatus;
@@ -91,4 +92,34 @@ export interface AppMetrics {
   diskUsageMB: number;
   requestCount: number;
   errorCount: number;
+}
+
+// Webhook model
+export interface Webhook {
+  id: string;
+  appId: string;
+  provider: "github" | "gitlab" | "bitbucket" | "custom";
+  secret: string;
+  branch?: string;
+  events: string[];
+  createdAt: Date;
+  lastTriggeredAt?: Date;
+  isActive: boolean;
+}
+
+// Organization/Team model
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  ownerId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface OrganizationMember {
+  organizationId: string;
+  userId: string;
+  role: "owner" | "admin" | "member";
+  joinedAt: Date;
 }

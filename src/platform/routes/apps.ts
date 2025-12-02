@@ -5,9 +5,10 @@ import { getProcessManager } from "../../core/process-manager.ts";
 import { getFileManager } from "../../core/file-manager.ts";
 import { getNginxManager } from "../../core/nginx-manager.ts";
 import { getDeploymentService } from "../../core/deployment.ts";
+import { getResourceMonitor } from "../../core/resource-monitor.ts";
 import { authMiddleware } from "../middleware/auth.ts";
 import { logger } from "../../utils/logger.ts";
-import { validateAppName, validateSubdomain, validateFileUpload } from "../../utils/validation.ts";
+import { validateAppName, validateSubdomain, validateFileUpload, validateCustomDomain } from "../../utils/validation.ts";
 import { sanitizeSubdomain } from "../../utils/security.ts";
 import { config } from "../../config.ts";
 import type { App } from "../../db/models.ts";
@@ -96,6 +97,7 @@ apps.post("/", async (c) => {
       userId: user.id,
       name,
       subdomain,
+      customDomains: [],
       createdAt: new Date(),
       updatedAt: new Date(),
       status: "stopped",
@@ -444,6 +446,177 @@ apps.get("/:id/logs", async (c) => {
   } catch (error) {
     logger.error("Failed to get logs", { error: error.message });
     return c.json({ error: "Failed to get logs" }, 500);
+  }
+});
+
+// Add custom domain
+apps.post("/:id/domains", async (c) => {
+  try {
+    const user = c.get("user");
+    const appId = c.req.param("id");
+    const body = await c.req.json();
+    const { domain } = body;
+
+    // Validate domain
+    const validation = validateCustomDomain(domain);
+    if (!validation.valid) {
+      return c.json({ error: "Validation failed", details: validation.errors }, 400);
+    }
+
+    const db = await getDB();
+    const app = await db.getAppById(appId);
+
+    if (!app) {
+      return c.json({ error: "App not found" }, 404);
+    }
+
+    if (app.userId !== user.id) {
+      return c.json({ error: "Unauthorized" }, 403);
+    }
+
+    // Check if domain already added
+    if (app.customDomains.includes(domain)) {
+      return c.json({ error: "Domain already added" }, 409);
+    }
+
+    // Add domain
+    const updatedDomains = [...app.customDomains, domain];
+    await db.updateApp(appId, { customDomains: updatedDomains });
+
+    // Regenerate Nginx config
+    const updatedApp = await db.getAppById(appId);
+    if (updatedApp) {
+      const nginxManager = getNginxManager();
+      await nginxManager.generateAppConfig(updatedApp);
+    }
+
+    logger.info(`Custom domain added: ${domain} for app ${app.name}`);
+
+    return c.json({
+      success: true,
+      customDomains: updatedDomains,
+      message: `Domain ${domain} added. Make sure it points to your server's IP.`
+    });
+  } catch (error) {
+    logger.error("Failed to add custom domain", { error: error.message });
+    return c.json({ error: "Failed to add custom domain" }, 500);
+  }
+});
+
+// Remove custom domain
+apps.delete("/:id/domains/:domain", async (c) => {
+  try {
+    const user = c.get("user");
+    const appId = c.req.param("id");
+    const domain = decodeURIComponent(c.req.param("domain"));
+
+    const db = await getDB();
+    const app = await db.getAppById(appId);
+
+    if (!app) {
+      return c.json({ error: "App not found" }, 404);
+    }
+
+    if (app.userId !== user.id) {
+      return c.json({ error: "Unauthorized" }, 403);
+    }
+
+    // Check if domain exists
+    if (!app.customDomains.includes(domain)) {
+      return c.json({ error: "Domain not found" }, 404);
+    }
+
+    // Remove domain
+    const updatedDomains = app.customDomains.filter(d => d !== domain);
+    await db.updateApp(appId, { customDomains: updatedDomains });
+
+    // Regenerate Nginx config
+    const updatedApp = await db.getAppById(appId);
+    if (updatedApp) {
+      const nginxManager = getNginxManager();
+      await nginxManager.generateAppConfig(updatedApp);
+    }
+
+    logger.info(`Custom domain removed: ${domain} from app ${app.name}`);
+
+    return c.json({
+      success: true,
+      customDomains: updatedDomains
+    });
+  } catch (error) {
+    logger.error("Failed to remove custom domain", { error: error.message });
+    return c.json({ error: "Failed to remove custom domain" }, 500);
+  }
+});
+
+// Get app metrics
+apps.get("/:id/metrics", async (c) => {
+  try {
+    const user = c.get("user");
+    const appId = c.req.param("id");
+    const db = await getDB();
+
+    const app = await db.getAppById(appId);
+
+    if (!app) {
+      return c.json({ error: "App not found" }, 404);
+    }
+
+    if (app.userId !== user.id) {
+      return c.json({ error: "Unauthorized" }, 403);
+    }
+
+    const limit = parseInt(c.req.query("limit") || "100");
+    const metrics = await db.getMetricsByApp(appId, limit);
+
+    // Also get current metrics
+    const resourceMonitor = getResourceMonitor();
+    const currentMetrics = await resourceMonitor.collectAppMetrics(appId);
+
+    return c.json({
+      current: currentMetrics,
+      history: metrics,
+    });
+  } catch (error) {
+    logger.error("Failed to get metrics", { error: error.message });
+    return c.json({ error: "Failed to get metrics" }, 500);
+  }
+});
+
+// Get system metrics
+apps.get("/system/metrics", async (c) => {
+  try {
+    const user = c.get("user");
+
+    const resourceMonitor = getResourceMonitor();
+    const systemMetrics = await resourceMonitor.getSystemMetrics();
+
+    // Get all user's apps resource usage
+    const db = await getDB();
+    const userApps = await db.getAppsByUser(user.id);
+
+    let totalAppsCpu = 0;
+    let totalAppsMemory = 0;
+
+    for (const app of userApps) {
+      const appMetrics = await resourceMonitor.collectAppMetrics(app.id);
+      if (appMetrics) {
+        totalAppsCpu += appMetrics.cpuUsage;
+        totalAppsMemory += appMetrics.memoryUsageMB;
+      }
+    }
+
+    return c.json({
+      system: systemMetrics,
+      userApps: {
+        count: userApps.length,
+        totalCpuUsage: totalAppsCpu,
+        totalMemoryUsageMB: totalAppsMemory,
+      },
+    });
+  } catch (error) {
+    logger.error("Failed to get system metrics", { error: error.message });
+    return c.json({ error: "Failed to get system metrics" }, 500);
   }
 });
 
