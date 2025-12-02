@@ -2,6 +2,21 @@
 
 A self-hosted Platform-as-a-Service (PaaS) for deploying Deno applications.
 
+## ⚠️ Important: Deployment Requirements
+
+**Denploy MUST run on your own infrastructure. It CANNOT run on:**
+- ❌ Deno Deploy (serverless)
+- ❌ Vercel, Netlify (serverless)
+- ❌ Cloudflare Workers (edge runtime)
+
+**Denploy MUST run on:**
+- ✅ Your own VPS/Server (DigitalOcean, Linode, AWS EC2, Hetzner, etc.)
+- ✅ Local development machine
+- ✅ On-premises server
+- ✅ Any machine where you have root/sudo access
+
+**Why?** Denploy spawns child processes, manages Nginx configs, and stores files on disk - features not available in serverless environments.
+
 ## Features
 
 - 🚀 Deploy Deno apps via web upload (single files or ZIP)
@@ -22,26 +37,28 @@ A self-hosted Platform-as-a-Service (PaaS) for deploying Deno applications.
 - **Real-time**: WebSockets
 - **Scheduling**: Deno Cron
 
-## Quick Start
+## Quick Start (Local Testing)
 
-1. Clone the repository:
+1. **Prerequisites:**
+   - Deno 2.x installed
+   - Linux, macOS, or WSL2 (Windows)
+
+2. Clone the repository:
 ```bash
 git clone <repository-url>
 cd Denploy
 ```
 
-2. Copy environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
-
-3. Run the platform:
+3. Run the platform (no .env needed for local testing):
 ```bash
 deno task dev
 ```
 
 4. Access the dashboard at `http://localhost:3000`
+
+5. Register an account and deploy your first app!
+
+**Note:** For local testing, .env is optional - defaults work out of the box. For production deployment, see `DEPLOYMENT.md`.
 
 ## Development
 
