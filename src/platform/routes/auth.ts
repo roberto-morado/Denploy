@@ -1,5 +1,5 @@
 import { Hono } from "@hono/hono";
-import { setCookie, deleteCookie } from "https://deno.land/x/hono@v4.6.14/helper.ts";
+import { setCookie, deleteCookie } from "@hono/hono/cookie";
 import { v4 as uuidv4 } from "@std/uuid";
 import { getDB } from "../../db/kv.ts";
 import { hashPassword, verifyPassword, generateToken } from "../../utils/security.ts";

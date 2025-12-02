@@ -1,5 +1,4 @@
 import { Hono } from "@hono/hono";
-import { serveStatic } from "https://deno.land/x/hono@v4.6.14/middleware.ts";
 import { config } from "../config.ts";
 import { logger } from "../utils/logger.ts";
 import { getNginxManager } from "../core/nginx-manager.ts";

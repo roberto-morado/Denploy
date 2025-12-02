@@ -1,5 +1,5 @@
 import { Context, Next } from "@hono/hono";
-import { getCookie } from "https://deno.land/x/hono@v4.6.14/helper.ts";
+import { getCookie } from "@hono/hono/cookie";
 import { verifyToken } from "../../utils/security.ts";
 import { getDB } from "../../db/kv.ts";
 
