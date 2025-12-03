@@ -1,6 +1,5 @@
 import { join } from "@std/path";
 import { ensureDir, exists } from "@std/fs";
-import { decompress } from "https://deno.land/x/zip@v1.2.5/mod.ts";
 import { config } from "../config.ts";
 import { logger } from "../utils/logger.ts";
 
@@ -29,7 +28,21 @@ export class FileManager {
   async extractZip(zipPath: string, targetDir: string): Promise<void> {
     try {
       await ensureDir(targetDir);
-      await decompress(zipPath, targetDir);
+
+      // Use unzip command for reliable extraction
+      const command = new Deno.Command("unzip", {
+        args: ["-q", "-o", zipPath, "-d", targetDir],
+        stdout: "piped",
+        stderr: "piped",
+      });
+
+      const { success, stderr } = await command.output();
+
+      if (!success) {
+        const errorText = new TextDecoder().decode(stderr);
+        throw new Error(`Failed to extract ZIP: ${errorText}`);
+      }
+
       logger.info(`Extracted ZIP to: ${targetDir}`);
     } catch (error) {
       logger.error("Failed to extract ZIP", { error: error.message });
