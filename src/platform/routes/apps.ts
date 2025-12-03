@@ -60,8 +60,22 @@ apps.get("/:id", async (c) => {
 apps.post("/", async (c) => {
   try {
     const user = c.get("user");
-    const body = await c.req.json();
-    const { name, subdomain: requestedSubdomain } = body;
+
+    // Support both JSON and form data
+    let name: string, requestedSubdomain: string | undefined;
+
+    const contentType = c.req.header("content-type") || "";
+
+    if (contentType.includes("application/json")) {
+      const body = await c.req.json();
+      name = body.name;
+      requestedSubdomain = body.subdomain;
+    } else {
+      // Form data
+      const formData = await c.req.formData();
+      name = formData.get("name") as string;
+      requestedSubdomain = formData.get("subdomain") as string;
+    }
 
     // Validate app name
     const nameValidation = validateAppName(name);
@@ -113,7 +127,12 @@ apps.post("/", async (c) => {
 
     logger.info(`App created: ${name} (${app.id}) by user ${user.email}`);
 
-    return c.json({ app }, 201);
+    // Return JSON for API calls, redirect for form submissions
+    if (contentType.includes("application/json")) {
+      return c.json({ app }, 201);
+    } else {
+      return c.redirect(`/dashboard/apps/${app.id}`);
+    }
   } catch (error) {
     logger.error("Failed to create app", { error: error.message });
     return c.json({ error: "Failed to create app" }, 500);
