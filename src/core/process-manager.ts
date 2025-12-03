@@ -2,6 +2,7 @@ import { join } from "@std/path";
 import { logger } from "../utils/logger.ts";
 import { getDB } from "../db/kv.ts";
 import type { App, LogEntry } from "../db/models.ts";
+import { findDenoPath } from "../config.ts";
 
 interface AppProcess {
   process: Deno.ChildProcess;
@@ -12,10 +13,19 @@ interface AppProcess {
 export class ProcessManager {
   private processes: Map<string, AppProcess>;
   private logStreams: Map<string, ReadableStreamDefaultReader<Uint8Array>>;
+  private denoPath: string | null = null;
 
   constructor() {
     this.processes = new Map();
     this.logStreams = new Map();
+  }
+
+  private async getDenoPath(): Promise<string> {
+    if (!this.denoPath) {
+      this.denoPath = await findDenoPath();
+      logger.info(`Using Deno executable at: ${this.denoPath}`);
+    }
+    return this.denoPath;
   }
 
   async startApp(app: App, appPath: string): Promise<void> {
@@ -29,8 +39,11 @@ export class ProcessManager {
 
       logger.info(`Starting app ${app.name} (${app.id}) on port ${app.port}`);
 
+      // Get Deno executable path
+      const denoPath = await this.getDenoPath();
+
       // Start Deno process
-      const command = new Deno.Command("deno", {
+      const command = new Deno.Command(denoPath, {
         args: [
           "run",
           "--allow-net",

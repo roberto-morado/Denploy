@@ -2,7 +2,7 @@ import { logger } from "./src/utils/logger.ts";
 import { startServer } from "./src/platform/server.ts";
 import { closeDB } from "./src/db/kv.ts";
 import { getWSManager } from "./src/platform/websocket.ts";
-import { isServerless } from "./src/config.ts";
+import { isServerless, findDenoPath } from "./src/config.ts";
 
 // Import cron jobs
 import "./src/jobs/health-check.ts";
@@ -31,6 +31,37 @@ async function main(): Promise<void> {
       logger.error("  ✓ On-premises server");
       logger.error("");
       logger.error("See DEPLOYMENT.md for setup instructions.");
+      logger.error("=".repeat(60));
+      Deno.exit(1);
+    }
+
+    // Verify Deno runtime is available
+    const denoPath = await findDenoPath();
+    logger.info(`Deno runtime found at: ${denoPath}`);
+
+    // Test that deno is actually executable
+    try {
+      const testCommand = new Deno.Command(denoPath, {
+        args: ["--version"],
+        stdout: "piped",
+        stderr: "piped",
+      });
+      const { success } = await testCommand.output();
+      if (!success) {
+        throw new Error("Deno executable test failed");
+      }
+    } catch (error) {
+      logger.error("⚠️  DENO RUNTIME ERROR ⚠️");
+      logger.error("");
+      logger.error(`Cannot execute Deno runtime at: ${denoPath}`);
+      logger.error("");
+      logger.error("Solutions:");
+      logger.error("  1. Make sure Deno is installed: curl -fsSL https://deno.land/install.sh | sh");
+      logger.error("  2. Add Deno to your PATH");
+      logger.error("  3. Or set DENO_PATH environment variable to the full path");
+      logger.error("     Example: DENO_PATH=/home/user/.deno/bin/deno");
+      logger.error("");
+      logger.error(`Error: ${error.message}`);
       logger.error("=".repeat(60));
       Deno.exit(1);
     }

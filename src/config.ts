@@ -24,6 +24,9 @@ export const config = {
     startPort: parseInt(getEnv("APPS_START_PORT", "8001")),
     basePath: getEnv("APPS_BASE_PATH", "./apps"),
   },
+  runtime: {
+    denoPath: getEnv("DENO_PATH", "deno"), // Can be overridden with full path
+  },
   nginx: {
     configPath: getEnv("NGINX_CONFIG_PATH", "./nginx/sites-enabled"),
     templatePath: getEnv("NGINX_TEMPLATE_PATH", "./nginx/templates"),
@@ -53,5 +56,54 @@ export const isServerless = (() => {
   const deployEnv = Deno.env.get("DENO_DEPLOYMENT_ID");
   return deployEnv !== undefined;
 })();
+
+// Helper to find the Deno executable path
+export async function findDenoPath(): Promise<string> {
+  // If DENO_PATH is explicitly set, use it
+  const configPath = config.runtime.denoPath;
+  if (configPath && configPath !== "deno") {
+    return configPath;
+  }
+
+  // Try to find deno using 'which' command
+  try {
+    const command = new Deno.Command("which", {
+      args: ["deno"],
+      stdout: "piped",
+      stderr: "piped",
+    });
+    const { success, stdout } = await command.output();
+
+    if (success) {
+      const path = new TextDecoder().decode(stdout).trim();
+      if (path) {
+        return path;
+      }
+    }
+  } catch {
+    // 'which' command not available
+  }
+
+  // Try common paths
+  const commonPaths = [
+    "/usr/local/bin/deno",
+    "/usr/bin/deno",
+    `${Deno.env.get("HOME")}/.deno/bin/deno`,
+  ];
+
+  for (const path of commonPaths) {
+    try {
+      const stat = await Deno.stat(path);
+      if (stat.isFile) {
+        return path;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  // Fallback to just "deno" and hope it's in PATH
+  return "deno";
+}
 
 export type Config = typeof config;
