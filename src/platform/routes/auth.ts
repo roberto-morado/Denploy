@@ -1,6 +1,6 @@
 import { Hono } from "@hono/hono";
 import { setCookie, deleteCookie } from "@hono/hono/cookie";
-import { v4 as uuidv4 } from "@std/uuid";
+import { v4 } from "@std/uuid";
 import { getDB } from "../../db/kv.ts";
 import { hashPassword, verifyPassword, generateToken } from "../../utils/security.ts";
 import { validateUserRegistration, validateLogin } from "../../utils/validation.ts";
@@ -48,7 +48,7 @@ auth.post("/register", async (c) => {
     // Create user
     const passwordHash = await hashPassword(password);
     const user: User = {
-      id: uuidv4.generate() as string,
+      id: v4.generate() as string,
       email,
       passwordHash,
       name,

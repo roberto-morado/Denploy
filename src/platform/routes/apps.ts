@@ -1,5 +1,5 @@
 import { Hono } from "@hono/hono";
-import { v4 as uuidv4 } from "@std/uuid";
+import { v4 } from "@std/uuid";
 import { getDB } from "../../db/kv.ts";
 import { getProcessManager } from "../../core/process-manager.ts";
 import { getFileManager } from "../../core/file-manager.ts";
@@ -93,7 +93,7 @@ apps.post("/", async (c) => {
 
     // Create app
     const app: App = {
-      id: uuidv4.generate() as string,
+      id: v4.generate() as string,
       userId: user.id,
       name,
       subdomain,

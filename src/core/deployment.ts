@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from "@std/uuid";
+import { v4 } from "@std/uuid";
 import { getDB } from "../db/kv.ts";
 import { getFileManager } from "./file-manager.ts";
 import { getProcessManager } from "./process-manager.ts";
@@ -20,7 +20,7 @@ export class DeploymentService {
     const fileManager = getFileManager();
     const processManager = getProcessManager();
 
-    const deploymentId = uuidv4.generate() as string;
+    const deploymentId = v4.generate() as string;
 
     // Get next version number
     const previousDeployments = await db.getDeploymentsByApp(app.id);
