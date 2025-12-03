@@ -13,8 +13,23 @@ const auth = new Hono();
 // Register new user
 auth.post("/register", async (c) => {
   try {
-    const body = await c.req.json();
-    const { email, password, name } = body;
+    // Support both JSON and form data
+    let email: string, password: string, name: string;
+
+    const contentType = c.req.header("content-type") || "";
+
+    if (contentType.includes("application/json")) {
+      const body = await c.req.json();
+      email = body.email;
+      password = body.password;
+      name = body.name;
+    } else {
+      // Form data
+      const formData = await c.req.formData();
+      email = formData.get("email") as string;
+      password = formData.get("password") as string;
+      name = formData.get("name") as string;
+    }
 
     // Validate input
     const validation = validateUserRegistration(email, password, name);
@@ -59,14 +74,19 @@ auth.post("/register", async (c) => {
       path: "/",
     });
 
-    return c.json({
-      success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-      },
-    }, 201);
+    // Redirect to dashboard if form submission, return JSON if API call
+    if (contentType.includes("application/json")) {
+      return c.json({
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        },
+      }, 201);
+    } else {
+      return c.redirect("/dashboard");
+    }
   } catch (error) {
     logger.error("Registration error", { error: error.message });
     return c.json({ error: "Internal server error" }, 500);
@@ -76,8 +96,21 @@ auth.post("/register", async (c) => {
 // Login
 auth.post("/login", async (c) => {
   try {
-    const body = await c.req.json();
-    const { email, password } = body;
+    // Support both JSON and form data
+    let email: string, password: string;
+
+    const contentType = c.req.header("content-type") || "";
+
+    if (contentType.includes("application/json")) {
+      const body = await c.req.json();
+      email = body.email;
+      password = body.password;
+    } else {
+      // Form data
+      const formData = await c.req.formData();
+      email = formData.get("email") as string;
+      password = formData.get("password") as string;
+    }
 
     // Validate input
     const validation = validateLogin(email, password);
@@ -117,14 +150,19 @@ auth.post("/login", async (c) => {
       path: "/",
     });
 
-    return c.json({
-      success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-      },
-    });
+    // Redirect to dashboard if form submission, return JSON if API call
+    if (contentType.includes("application/json")) {
+      return c.json({
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        },
+      });
+    } else {
+      return c.redirect("/dashboard");
+    }
   } catch (error) {
     logger.error("Login error", { error: error.message });
     return c.json({ error: "Internal server error" }, 500);

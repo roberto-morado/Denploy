@@ -15,7 +15,8 @@ export class Logger {
 
   constructor(logLevel: LogLevel = LogLevel.INFO) {
     this.logLevel = logLevel;
-    this.logFile = join(config.logs.path, `platform-${this.getDateString()}.log`);
+    const logsPath = config.logs.path || "./logs";
+    this.logFile = join(logsPath, `platform-${this.getDateString()}.log`);
   }
 
   private getDateString(): string {
@@ -31,14 +32,19 @@ export class Logger {
 
   private async writeToFile(message: string): Promise<void> {
     try {
-      await ensureDir(config.logs.path);
+      if (!this.logFile || this.logFile.trim() === "") {
+        // Skip file logging if path is invalid
+        return;
+      }
+      const logsPath = config.logs.path || "./logs";
+      await ensureDir(logsPath);
       const encoder = new TextEncoder();
       const data = encoder.encode(message + "\n");
       const file = await Deno.open(this.logFile, { write: true, create: true, append: true });
       await file.write(data);
       file.close();
     } catch (error) {
-      console.error("Failed to write to log file:", error);
+      // Silently fail - we already logged to console
     }
   }
 
