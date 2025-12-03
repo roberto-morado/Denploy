@@ -3,7 +3,6 @@ import { getProcessManager } from "./process-manager.ts";
 import { getFileManager } from "./file-manager.ts";
 import { logger } from "../utils/logger.ts";
 import type { AppMetrics } from "../db/models.ts";
-import { v4 as uuidv4 } from "@std/uuid";
 
 export class ResourceMonitor {
   /**

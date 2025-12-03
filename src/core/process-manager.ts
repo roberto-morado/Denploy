@@ -2,7 +2,6 @@ import { join } from "@std/path";
 import { logger } from "../utils/logger.ts";
 import { getDB } from "../db/kv.ts";
 import type { App, LogEntry } from "../db/models.ts";
-import { v4 } from "@std/uuid";
 
 interface AppProcess {
   process: Deno.ChildProcess;
@@ -174,7 +173,7 @@ export class ProcessManager {
 
           // Store in database
           const logEntry: LogEntry = {
-            id: v4.generate() as string,
+            id: crypto.randomUUID(),
             appId,
             timestamp: new Date(),
             level: level === "error" ? "error" : "info",

@@ -15,8 +15,7 @@
     "@std/fs": "jsr:@std/fs@^1.0.0",
     "@std/crypto": "jsr:@std/crypto@^1.0.0",
     "@std/encoding": "jsr:@std/encoding@^1.0.0",
-    "@std/streams": "jsr:@std/streams@^1.0.0",
-    "@std/uuid": "jsr:@std/uuid@^1.0.0"
+    "@std/streams": "jsr:@std/streams@^1.0.0"
   },
   "compilerOptions": {
     "lib": ["deno.window", "deno.unstable"],
